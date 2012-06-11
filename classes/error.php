@@ -7,29 +7,8 @@ namespace Alert;
 class Error extends \Fuel\Core\Error {
 
     public static function show_php_error(\Exception $e) {
-        $body = "";
-
-        if (\Fuel::$is_cli) {
-            $fatal = (bool) (!in_array($e->getCode(), \Config::get('errors.continue_on', array())));
-            $data = static::prepare_exception($e, $fatal);
-            if ($fatal) {
-                $data['contents'] = ob_get_contents();
-                while (ob_get_level() > 0) {
-                    ob_end_clean();
-                }
-                ob_start(\Config::get('ob_callback', null));
-            } else {
-                static::$non_fatal_cache[] = $data;
-            }
-
-            $body = $data['severity'] . ' - ' . $data['message'] . ' in ' . \Fuel::clean_path($data['filepath']) . ' on line ' . $data['error_line'];
-        } else {
-            ob_start();
-            parent::show_php_error($e);
-            $body = ob_get_contents();
-            ob_end_clean();
-        }
-        self::mail($body);
+        self::mail_exception($e);
+        parent::show_php_error($e);
     }
 
     public static function notice($msg, $always_show = false) {
@@ -41,14 +20,8 @@ class Error extends \Fuel\Core\Error {
     }
 
     public static function show_production_error(\Exception $e) {
-        // always mail the php error
-        return static::show_php_error($e);
-
-        if (!headers_sent()) {
-            $protocol = \Input::server('SERVER_PROTOCOL') ? \Input::server('SERVER_PROTOCOL') : 'HTTP/1.1';
-            header($protocol . ' 500 Internal Server Error');
-        }
-        exit(\View::forge('errors' . DS . 'production'));
+        self::mail_exception($e);
+        parent::show_production_error($e);
     }
 
     public static function mail($body) {
@@ -68,6 +41,21 @@ class Error extends \Fuel\Core\Error {
         if (\Fuel\Core\Fuel::$env != \Fuel\Core\Fuel::PRODUCTION && \Fuel\Core\Config::get('alert.mail_and_show', true)) {
             echo $body;
         }
+    }
+    
+    public static function mail_exception(\Exception $e){
+        $body = "";
+        $data = static::prepare_exception($e);
+
+		$data['contents'] = ob_get_contents();
+		$data['non_fatal'] = static::$non_fatal_cache;
+		try{
+				$body =  \View::forge('errors'.DS.'php_fatal_error', $data, false);
+		}catch (\FuelException $view_exception){
+				$body = $data['severity'].' - '.$data['message'].' in '.\Fuel::clean_path($data['filepath']).' on line '.$data['error_line'];
+    	}
+
+        self::mail($body);
     }
 
 }
