@@ -5,4 +5,5 @@ return array(
     'from' => 'example@example.com',
     'subject' => 'Error',
     'mail_and_show' => true,
+    'production_only' => true,
 );

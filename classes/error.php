@@ -28,15 +28,17 @@ class Error extends \Fuel\Core\Error {
         if (empty($body)) {
             return;
         }
+        if (\Fuel\Core\Fuel::$env == \Fuel\Core\Fuel::PRODUCTION && \Fuel\Core\Config::get('alert.production_only', true)) {
 
-        \Fuel\Core\Config::load('alert', true);
-        $to = \Fuel\Core\Config::get('alert.to', NULL);
-        $from = \Fuel\Core\Config::get('alert.from', NULL);
-        $subject = \Fuel\Core\Config::get('alert.subject', 'Error');
-        $header = "From:" . $from . "\n"
-                . "MIME-Version: 1.0\n"
-                . "Content-Type: text/html;";
-        mail($to, $subject, $body, $header);
+            \Fuel\Core\Config::load('alert', true);
+            $to = \Fuel\Core\Config::get('alert.to', NULL);
+            $from = \Fuel\Core\Config::get('alert.from', NULL);
+            $subject = \Fuel\Core\Config::get('alert.subject', 'Error');
+            $header = "From:" . $from . "\n"
+                    . "MIME-Version: 1.0\n"
+                    . "Content-Type: text/html;";
+            mail($to, $subject, $body, $header);
+        }
 
         if (\Fuel\Core\Fuel::$env != \Fuel\Core\Fuel::PRODUCTION && \Fuel\Core\Config::get('alert.mail_and_show', true)) {
             echo $body;
